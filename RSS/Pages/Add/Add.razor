@@ -1,0 +1,60 @@
+﻿@page "/add"
+
+<PageTitle>Add RSS Feed</PageTitle>
+
+@using RSS.Data;
+@using RSS.Pages.Add;
+@using RSS.Services;
+@inject FeedService FeedService
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
+@inject Session Session
+@inject ConfigService ConfigService
+
+<h1>Добавить новый rss фид</h1>
+
+<EditForm Model="NewFeed" OnValidSubmit="@HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <InputText class="m-2" id="url" @bind-Value="NewFeed.Url">Введите ссылку на rss фид...</InputText> <ValidationMessage For="() => NewFeed.Url" />
+    <button class="btn-outline-secondary" type="submit">Проверить фид</button>
+</EditForm>
+
+@if (NewFeed.Feed != null)
+{
+    <div class="alert alert-info mt-4">
+        <h3>@NewFeed.Feed.Title</h3>
+        <div class="text-wrap">
+            <p>@NewFeed.Feed.Description</p>
+        </div>
+        <div class="text-opacity-75">
+            <p>@NewFeed.Feed.LastUpdated.ToString()</p>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="@OnFollowFeed">Подписаться на обновления</button>
+}
+else {
+    <div class="alert alert-info mt-4">
+        <h3>Ресурс недоступен</h3>
+    </div>
+}
+
+@code {
+    private AddModel? NewFeed = new AddModel();
+
+    private async Task HandleValidSubmit() {
+        NewFeed.Feed = await FeedService.GetFeed(NewFeed.Url);
+    }
+
+    public async Task OnFollowFeed()
+    {
+        List<string> existingFeeds = await FeedService.GetUrls();
+        if (!existingFeeds.Contains(NewFeed.Url)) {
+            await FeedService.AddFeedToStorage(NewFeed.Feed);
+            await ConfigService.SaveFeedsConfig();
+            await NotificationService.NotifyFeedChange();
+        }
+
+        NavigationManager.NavigateTo($"/feed/{NewFeed.Feed.FeedId}");
+    }
+}

@@ -1,0 +1,19 @@
+﻿.rss_feed {
+    margin: 0;
+    padding: 10px;
+    background: lightgrey;
+}
+
+.rss_feed > h3, .rss-description, .rss-pubdate {
+    margin: 10px;
+    padding: 5px;
+}
+
+.rss-description {
+    background: white;
+}
+
+.rss-pubdate {
+    font-size: 90%;
+    color: gainsboro;
+}

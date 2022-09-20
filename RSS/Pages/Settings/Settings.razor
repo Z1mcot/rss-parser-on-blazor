@@ -1,0 +1,36 @@
+﻿@page "/settings"
+@using RSS.Services
+@inject Session Session
+@inject FeedService FeedService
+@inject ConfigService ConfigService
+
+<h1>Настройки</h1>
+<EditForm Model="newSettings">
+    <DataAnnotationsValidator />
+
+    <h3>Настройки ленты</h3>
+    <p>Задайте время автообновления ленты (в минутах). 0 — отключение автообновления</p>
+    <InputNumber class="m-1" @bind-Value="newSettings.NewUpdateTime"></InputNumber> <ValidationMessage For="() => newSettings.NewUpdateTime" /> <br />
+    
+    <p>Количество постов в фиде</p>
+    <InputNumber class="m-1" @bind-Value="newSettings.FeedItemsLimit" ></InputNumber> <ValidationMessage For="() => newSettings.FeedItemsLimit" /> <br />
+
+    <h3>Настройки прокси</h3>
+    <p>Адрес прокси сервера</p>
+    <InputText class="m-1" @bind-Value="newSettings.ProxyUrl"></InputText> <ValidationMessage For="() => newSettings.ProxyUrl" /> <br />
+    
+    <p>Имя учётной записи</p>
+    <InputText class="m-1" @bind-Value="newSettings.ProxyUsername"></InputText> <br />
+
+    <p>Пароль от учётной записи</p>
+    <InputText type="password" class="m-1" @bind-Value="newSettings.ProxyPassword"></InputText> <br />
+
+    <button class="m-2 btn-outline-secondary" type="submit" @onclick="@newSettings.SetUpdateSettings">Обновить настройки</button>
+</EditForm>
+@code {
+    SettingsModel newSettings;
+    protected override Task OnInitializedAsync()
+    {
+        return Task.FromResult(newSettings = new SettingsModel(Session, FeedService, ConfigService));
+    }
+}

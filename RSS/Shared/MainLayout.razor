@@ -1,0 +1,43 @@
+﻿@using RSS.Data;
+@using RSS.Services;
+@inherits LayoutComponentBase
+@inject FeedService FeedService
+@inject NotificationService NotificationService
+@inject ConfigService ConfigService
+
+<PageTitle>RSS</PageTitle>
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu Feeds="@MenuItems" />
+    </div>
+
+    <main>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    public List<Feed> MenuItems { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        NotificationService.OnFeedUpdated += UpdateFeeds;
+        await ConfigService.ReadFromXML();
+        await ConfigService.SyncServicesAndConfig();
+        await FeedService.SetFeedItemsLimit();
+        await LoadMenuItems();
+        if (firstRender) this.StateHasChanged();
+    }
+
+    private async Task LoadMenuItems() {
+        MenuItems = await FeedService.GetFeedsFromStorage();
+    }
+
+    private async Task UpdateFeeds() {
+        await LoadMenuItems();
+        StateHasChanged();
+    }
+}

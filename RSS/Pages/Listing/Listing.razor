@@ -1,0 +1,122 @@
+﻿@page "/feed/{id}"
+@using Blazored.LocalStorage
+@using RSS.Data
+@using RSS.Services
+@using System.Linq
+@inject FeedService FeedService
+@inject NotificationService NotificationService
+@inject Session Session
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
+@inject ConfigService ConfigService
+
+@if (IsBusy)
+{
+    <p class="m-3">Loading feed ...</p>
+}
+else
+{
+    @if (Feed != null)
+    {
+        <div class="col">
+            <h1>@Feed.Title</h1>
+            <small class="text-wrap text-black-50 m-sm-2">@Feed.Description</small>
+        </div>
+
+        <div class="button-utils" title="Refresh" onclick="@OnRefreshFeed" style="cursor:pointer;flex-wrap:nowrap">
+            Обновить фид
+        </div>
+        <div class="button-utils" title="Delete" onclick="@OnDeleteFeed" style="cursor:pointer;flex-wrap:nowrap">
+            Удалить фид
+        </div>
+    }
+    <div class="container-fluid">
+        <hr class="row"/>
+        @if (FeedItems != null)
+        {
+            @foreach (var item in FeedItems)
+            {
+                <div class="border-bottom">
+                    <div class="feed-article" onclick="@(()=>OnFeedItemClick(item))" style="cursor:pointer;flex-wrap:wrap">
+                        <p class="text-black"><b>@item.Title</b></p> 
+                        <p class="text-upper-padding">@item.Description</p>
+                        <small>@item.PubDate.ToString("dd.MM.yy hh:mm")</small>
+                    </div>
+                </div>
+            }
+        }
+        else {
+            <h3>Ресурс недоступен</h3>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] 
+    public string Id { get; set; } = "";
+
+    public Feed Feed { get; set; } = null;
+    public List<FeedItem> FeedItems { get; set; } = null;
+    public bool IsBusy { get; set; } = false;
+
+    public int UpdateTime;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (string.IsNullOrEmpty(Id)) return;
+
+        IsBusy = true;
+        ClearFeedItems();
+        await LoadFeedDetails();
+        await LoadFeedItems();
+        UpdateTime = await Session.GetUpdateTime();
+        IsBusy = false;
+
+        if (UpdateTime != 0)
+        {
+            var timer = new System.Threading.Timer((_) =>
+            {
+                InvokeAsync(async () =>
+                {
+                    await OnRefreshFeed();
+                    StateHasChanged();
+                });
+            }, null, 0, UpdateTime);
+        }
+    }
+
+    private void ClearFeedItems()
+    {
+        FeedItems = null;
+    }
+
+    public void OnFeedItemClick(FeedItem item)
+    {
+        JSRuntime.InvokeVoidAsync("open", $"{item.Link}", "_blank");
+    }
+
+    public async Task OnRefreshFeed()
+    {
+        IsBusy = true;
+        await LoadFeedItems();
+        IsBusy = false;
+    }
+
+    private async Task LoadFeedItems()
+    {
+        FeedItems = (await FeedService.GetFeedItems(Feed)).ToList();
+    }
+
+    private async Task LoadFeedDetails()
+    {
+        Feed = await FeedService.GetFeedFromStorage(Id);
+    }
+
+    public async Task OnDeleteFeed() 
+    {
+        await FeedService.RemoveFeedFromStorager(Id);
+        await ConfigService.SaveFeedsConfig();
+        await NotificationService.NotifyFeedChange();
+        NavigationManager.NavigateTo("/add");
+    }
+}
